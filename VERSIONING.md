@@ -11,7 +11,7 @@ The version should follow the standard `major.minor.patch` style, see http://sem
 
 # Examples of changes that would warrant a `minor` version changes
 
-* Introduction of new functinoality, without breaking backwards compatibility.
+* Introduction of new functionality, without breaking backwards compatibility.
 
 # Examples of changes that would warrant a `major` version changes
 
