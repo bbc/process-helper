@@ -99,6 +99,7 @@ module ProcessHelper
       @lines = prefill.dup
       @mutex = Mutex.new
       @opts = opts
+      @eof = false
     end
 
     def start
@@ -108,8 +109,13 @@ module ProcessHelper
           STDOUT.puts l if @opts[:print_lines]
           @mutex.synchronize { @lines.push l }
         end
+        @mutex.synchronize { @eof = true }
       end
       self
+    end
+
+    def eof
+      @mutex.synchronize { !!@eof }
     end
 
     def wait_for_output(regex, opts = {})
@@ -119,6 +125,7 @@ module ProcessHelper
       until _any_line_matches(regex)
         sleep(opts[:poll_rate])
         fail "Timeout of #{opts[:timeout]} seconds exceeded while waiting for output that matches '#{regex}'" if DateTime.now > cutoff
+        fail "EOF encountered while waiting for output that matches '#{regex}'" if eof and !_any_line_matches(regex)
       end
     end
 

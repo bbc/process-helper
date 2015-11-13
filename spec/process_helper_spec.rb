@@ -97,6 +97,21 @@ module ProcessHelper
         expect(startup_log[-1]).to eq("frog\n")
       end
 
+      it 'It should give up when EOF is hit' do
+        t0 = Time.now
+        process = ProcessHelper.new
+        expect {
+          process.start(
+            ['sh', '-c', 'sleep 1'],
+            /this message never appears/,
+            5,
+          )
+        }.to raise_error(/EOF/)
+        t1 = Time.now
+
+        expect((t1-t0-1).abs).to be < 0.5 # didn't wait for timeout
+      end
+
       it 'It should be able to arbitrarly wait for output' do
         t0 = Time.now
         process = ProcessHelper.new
