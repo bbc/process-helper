@@ -123,10 +123,10 @@ module ProcessHelper
     def wait_for_output(regex, opts = {})
       opts = { :poll_rate => 0.25 }.merge(opts)
       opts[:timeout] ||= 30
-      cutoff = DateTime.now + Rational(opts[:timeout].to_i, 86_400)
+      cutoff = Time.now + opts[:timeout].to_i
       until _any_line_matches(regex)
         sleep(opts[:poll_rate])
-        fail "Timeout of #{opts[:timeout]} seconds exceeded while waiting for output that matches '#{regex}'" if DateTime.now > cutoff
+        fail "Timeout of #{opts[:timeout]} seconds exceeded while waiting for output that matches '#{regex}'" if Time.now > cutoff
         fail "EOF encountered while waiting for output that matches '#{regex}'" if eof and !_any_line_matches(regex)
       end
     end
