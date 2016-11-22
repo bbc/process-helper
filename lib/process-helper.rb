@@ -20,27 +20,27 @@ module ProcessHelper
     # output_to_wait_for:: Regex containing expected output, +start+ will block until a line of STDOUT matches this regex, if this is nil, then no waiting occurs.
     # wait_timeout:: Timeout while waiting for particular output.
     # env:: Hash of extra environment variables with which to start the process.
-    def start(command_and_args = [], output_to_wait_for = nil, wait_timeout = nil, env = {})
+    def start(command_and_args = [], output_to_wait_for = nil, wait_timeout = nil, env = {}, opts = {})
       out_r, out_w = IO.pipe
-      err_r, err_w = IO.pipe
+      @out_log = ProcessLog.new(out_r, @opts).start
+      if opts[:stderr]
+        err_r, err_w = IO.pipe
+        @err_log = ProcessLog.new(err_r, @opts).start
+      else
+        err_w = out_w
+      end
       @pid = spawn(env, *command_and_args, :out => out_w, :err => err_w)
       out_w.close
-      err_w.close
-
-      log = []
-
-      @out_log = ProcessLog.new(out_r, @opts, log).start
-      @err_log = ProcessLog.new(err_r, @opts).start
-
-      @out_log.wait_for_output(output_to_wait_for, :timeout => wait_timeout) if output_to_wait_for
+      err_w.close if opts[:stderr]
+      @out_log.wait_for_output(output_to_wait_for, :timeout => wait_timeout) unless output_to_wait_for.nil?
     end
 
     # returns true if the process exited with an exit code of 0.
     def wait_for_exit
       @out_log.wait
-      @err_log.wait
+      @err_log.wait unless @err_log.nil?
 
-      Process.wait @pid
+      Process.wait(@pid)
       @exit_status = $CHILD_STATUS
 
       @pid = nil
@@ -57,7 +57,8 @@ module ProcessHelper
     # * +:out+
     # * +:err+
     def get_log(which)
-      _get_log(which).to_a
+      log = _get_log(which)
+      log.nil? ? [] : log.to_a
     end
 
     # Gets an array containing all the lines for the specified stream, emptying the stored buffer.
@@ -65,7 +66,8 @@ module ProcessHelper
     # * +:out+
     # * +:err+
     def get_log!(which)
-      _get_log(which).drain
+      log = _get_log(which)
+      log.nil? ? [] : log.drain
     end
 
     # Blocks the current thread until the specified regex has been matched in the output.

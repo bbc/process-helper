@@ -1,6 +1,14 @@
 require 'spec_helper'
 
+def run(*args)
+  process = ProcessHelper::ProcessHelper.new
+  process.start(*args)
+  process.wait_for_exit
+  process
+end
+
 module ProcessHelper
+
   describe ProcessHelper do
     context 'Things...' do
       it 'It should start a process and capture the exit status (success)' do
@@ -33,23 +41,20 @@ module ProcessHelper
       end
 
       it 'It should expose stdout' do
-        process = ProcessHelper.new
-        process.start(['sh', '-c', 'echo hello ; echo there'])
-        process.wait_for_exit
+        process = run(['sh', '-c', 'echo hello ; echo there'])
         out = process.get_log(:out)
-        expect(out.count).to eq(2)
-        expect(out[0]).to eq("hello\n")
-        expect(out[1]).to eq("there\n")
+        expect(out).to eq(["hello\n", "there\n"])
+      end
+
+      it 'It should expose stdout and stderr' do
+        process = run(['sh', '-c', 'echo hello; echo there >&2'])
+        expect(process.get_log(:out)).to eq(["hello\n", "there\n"])
+        expect(process.get_log(:err)).to eq([])
       end
 
       it 'It should expose stderr' do
-        process = ProcessHelper.new
-        process.start(['sh', '-c', 'echo hello >&2; echo there >&2'])
-        process.wait_for_exit
-        err = process.get_log(:err)
-        expect(err.count).to eq(2)
-        expect(err[0]).to eq("hello\n")
-        expect(err[1]).to eq("there\n")
+        process = run(['sh', '-c', 'echo hello >&2; echo there >&2'], nil, nil, {}, stderr: true)
+        expect(process.get_log(:err)).to eq(["hello\n", "there\n"])
       end
 
       it 'It should expose the pid' do
@@ -63,9 +68,7 @@ module ProcessHelper
 
       it 'It should timestamp the logs' do
         t0 = Time.now
-        process = ProcessHelper.new
-        process.start(['sh', '-c', 'echo a ; sleep 1 ; echo b ; sleep 1 ; echo c'])
-        process.wait_for_exit
+        process = run(['sh', '-c', 'echo a ; sleep 1 ; echo b ; sleep 1 ; echo c'])
         t1 = Time.now
 
         out = process.get_log(:out)
@@ -85,7 +88,7 @@ module ProcessHelper
         process = ProcessHelper.new
         process.start(
           ['sh', '-c', 'echo frog >&2 ; sleep 1 ; echo cat ; sleep 1 ; echo dog ; sleep 1 ; echo frog'],
-          /fro/
+          /fro/, nil, {}, stderr: true
         )
         t1 = Time.now
 
@@ -117,7 +120,7 @@ module ProcessHelper
         process = ProcessHelper.new
         process.start(
           ['sh', '-c', 'echo frog >&2 ; sleep 1 ; echo cat ; sleep 1 ; echo dog ; sleep 1 ; echo frog; sleep 3; echo goat'],
-          /fro/
+          /fro/, nil, {}, stderr: true
         )
         t1 = Time.now
 
@@ -133,7 +136,8 @@ module ProcessHelper
       it 'It should support draining the logs' do
         process = ProcessHelper.new
         process.start(
-          ['bash', '-c', 'for ((i=0; $i<10; i=$i+1)) ; do echo out $i ; echo err $i >&2 ; sleep 1 ; done']
+          ['bash', '-c', 'for ((i=0; $i<10; i=$i+1)) ; do echo out $i ; echo err $i >&2 ; sleep 1 ; done'],
+          nil, nil, {}, stderr: true
         )
 
         sleep 3
