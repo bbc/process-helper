@@ -10,7 +10,7 @@ end
 module ProcessHelper
 
   describe ProcessHelper do
-    context 'Things...' do
+    context 'Tests' do
       it 'It should start a process and capture the exit status (success)' do
         process = ProcessHelper.new
         process.start('true')
